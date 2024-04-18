@@ -26,9 +26,11 @@
         <div class="center">
             <h2 class="form-title" id="login"><span>or</span>Log in</h2>
             <div class="form-holder">
-                <form action="Inicio.php" method="post">
+                <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
                     <input type="email" class="input" placeholder="Email" name="email" required>
                     <input type="password" class="input" placeholder="Password" name="password" required>
+                    <span class="help-block"><?php echo $email_err; ?></span>
+                    <span class="help-block"><?php echo $password_err; ?></span>
                 </div>
                 <button type="submit" class="submit-btn">Log in</button>
                 </form>
@@ -37,6 +39,67 @@
     </div>
 </div>
 
+<?php
+$conexion = new mysqli("sql212.infinityfree.com", "if0_36307240", "sMEBzmPZyj2PM", "if0_36307240_bib");
+
+if ($conexion->connect_error) {
+    die("Error de conexión: " . $conexion->connect_error);
+}
+
+$email = $password = "";
+$email_err = $password_err = "";
+
+if($_SERVER["REQUEST_METHOD"] == "POST"){
+
+    if(empty(trim($_POST["email"]))){
+        $email_err = "Por favor, ingrese su correo electrónico.";
+    } else{
+        $email = trim($_POST["email"]);
+    }
+    
+    if(empty(trim($_POST["password"]))){
+        $password_err = "Por favor, ingrese su contraseña.";
+    } else{
+        $password = trim($_POST["password"]);
+    }
+    
+    if(empty($email_err) && empty($password_err)){
+        $sql = "SELECT id, email, password FROM usser WHERE email = ?";
+        
+        if($stmt = $conexion->prepare($sql)){
+            $stmt->bind_param("s", $param_email);
+            
+            $param_email = $email;
+            
+            if($stmt->execute()){
+                $stmt->store_result();
+                
+                if($stmt->num_rows == 1){                    
+                    $stmt->bind_result($id, $email, $hashed_password);
+                    if($stmt->fetch()){
+                        if(password_verify($password, $hashed_password)){
+                            session_start();
+                            
+                            $_SESSION["loggedin"] = true;
+                            $_SESSION["id"] = $id;
+                            $_SESSION["email"] = $email;                            
+                            
+                            header("location: welcome.php");
+                        } else{
+                            $password_err = "La contraseña que ha ingresado no es válida.";
+                        }
+                    }
+                } else{
+                    $email_err = "No se encontró ninguna cuenta registrada con ese correo electrónico.";
+                }
+            } else{
+                echo "Oops! Algo salió mal. Por favor, inténtelo de nuevo más tarde.";
+            }
+        }
+        $stmt->close();
+    }
+}
+?>
 <script>
         console.clear();
 
